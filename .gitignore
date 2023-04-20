@@ -1,4 +1,30 @@
-/venv/
-/build/
-/dist/
-/cianparser.egg-info/
+### PyCharm ###
+
+.idea/
+
+### VisualStudioCode ###
+
+.vscode/
+
+### JupyterNotebooks ###
+
+.ipynb_checkpoints/
+*.ipynb
+
+### Python ###
+
+# Byte-compiled / optimized / DLL files
+__pycache__/
+*.py[cod]
+
+# Distribution / packaging
+build/
+dist/
+eggs/
+.eggs/
+*.egg-info/
+*.egg
+
+# Environments
+venv/
+.venv/
