@@ -9,10 +9,11 @@ pip install cianparser
 ```
 
 ### Использование
+
 ```python
 import cianparser
-    
-data = cianparser.parse(
+
+data = cianparser.parse_auto(
     deal_type="rent_long",
     accommodation_type="flat",
     location="Москва",

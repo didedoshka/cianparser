@@ -1,9 +1,11 @@
+import pathlib
+
 from cianparser.constants import *
-from cianparser.parser import ParserOffersAuto
+from cianparser.parser import ParserOffersAuto, ParserOffersByURL
+
 
 offer_types = {"rent_long", "rent_short", "sale"}
 deal_types_not_implemented_yet = {"rent_short"}
-
 accommodation_types = {"flat", "room", "house", "house-part", "townhouse"}
 accommodation_types_not_implemented_yet = {"room", "house", "house-part", "townhouse"}
 
@@ -12,14 +14,15 @@ def list_cities():
     return CITIES
 
 
-def parse(deal_type, accommodation_type, location, rooms="all", start_page=1, end_page=100,
-          is_saving_csv=False, is_latin=False, is_express_mode=False, is_by_homeowner=False):
-    """
-    Parse information from cian website
+def parse_auto(deal_type, accommodation_type, location, rooms="all", start_page=1, end_page=100,
+               is_saving_csv=False, is_latin=False, is_express_mode=False, is_by_homeowner=False,
+               data_dir_path: pathlib.Path | None = None):
+    """Parse information from cian website.
+
     Examples:
-        >>> data = cianparser.parse(offer="rent_long", accommodation="flat", location="Казань", rooms=1, start_page=1, end_page=1)
-        >>> data = cianparser.parse(offer="rent_short", accommodation="flat", location="Москва", rooms=(1,3,"studio"))
-        >>> data = cianparser.parse(offer="sale", accommodation="house", location="Санкт-Петербург", rooms="all")
+        >>> data = cianparser.parse_auto(offer="rent_long", accommodation="flat", location="Казань", rooms=1, start_page=1, end_page=1)
+        >>> data = cianparser.parse_auto(offer="rent_short", accommodation="flat", location="Москва", rooms=(1,3,"studio"))
+        >>> data = cianparser.parse_auto(offer="sale", accommodation="house", location="Санкт-Петербург", rooms="all")
     :param str deal_type: type of deal, e.g. "rent_long", "rent_short", "sale"
     :param str accommodation_type: type of accommodation, e.g. "flat", "room", "house", "house-part", "townhouse"
     :param str location: location. e.g. "Казань", for see all correct values use cianparser.list_cities()
@@ -82,17 +85,40 @@ def parse(deal_type, accommodation_type, location, rooms="all", start_page=1, en
         return []
     else:
         parser = ParserOffersAuto(
-            deal_type=deal_type,
-            accommodation_type=accommodation_type,
-            city_name=location,
-            location_id=location_id,
-            rooms=rooms,
-            start_page=start_page,
-            end_page=end_page,
-            is_saving_csv=is_saving_csv,
-            is_latin=is_latin,
-            is_express_mode=is_express_mode,
-            is_by_homeowner=is_by_homeowner,
+            deal_type,
+            accommodation_type,
+            location,  # city_name
+            location_id,
+            rooms,
+            start_page,
+            end_page,
+            is_saving_csv,
+            is_latin,
+            is_express_mode,
+            is_by_homeowner,
+            data_dir_path,
         )
         parser.run()
         return parser.get_results()
+
+
+def parse_by_url(search_url: str, deal_type: str, accommodation_type: str, location: str,
+                 start_page: int, end_page: int, is_saving_csv=False, is_latin=False,
+                 is_express_mode=False, is_by_homeowner=False,
+                 data_dir_path: pathlib.Path | None = None):
+
+    parser = ParserOffersByURL(
+        search_url,
+        deal_type,
+        accommodation_type,
+        location,
+        start_page,
+        end_page,
+        is_saving_csv,
+        is_latin,
+        is_express_mode,
+        is_by_homeowner,
+        data_dir_path,
+    )
+    parser.run()
+    return parser.get_results()

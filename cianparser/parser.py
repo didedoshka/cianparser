@@ -30,7 +30,7 @@ class ParserOffers(ABC):
         self.is_by_homeowner = is_by_homeowner
         self.data_dir_path = data_dir_path
         self._set_deal_type(deal_type)
-        self._create_file_path()
+        self._set_file_path()
 
         self.session = cloudscraper.create_scraper()
         self.session.headers = {'Accept-Language': 'en'}
@@ -99,7 +99,7 @@ class ParserOffers(ABC):
         else:
             self.deal_type = "sale"
 
-    def _create_file_path(self) -> None:
+    def _set_file_path(self) -> None:
         if not self.data_dir_path:
             self.data_dir_path = pathlib.Path('data/')
             self.data_dir_path.mkdir(parents=False, exist_ok=True)
@@ -719,4 +719,29 @@ class ParserOffersAuto(ParserOffers):
             url += IS_ONLY_HOMEOWNER
 
         url = url.format(number_page, self.location_id)
+        return url
+
+
+class ParserOffersByURL(ParserOffers):
+    def __init__(self, search_url: str, deal_type: str, accommodation_type: str, city_name: str,
+                 start_page: int, end_page: int, is_saving_csv=False, is_latin=False,
+                 is_express_mode=False, is_by_homeowner=False,
+                 data_dir_path: pathlib.Path | None = None):
+
+        super().__init__(
+            deal_type,
+            accommodation_type,
+            city_name,
+            start_page,
+            end_page,
+            is_saving_csv,
+            is_latin,
+            is_express_mode,
+            is_by_homeowner,
+            data_dir_path,
+        )
+        self.search_url = search_url
+
+    def _build_url(self, number_page: int) -> str:
+        url = self.search_url + f'&p={number_page}'
         return url
