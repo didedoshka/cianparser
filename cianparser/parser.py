@@ -153,7 +153,7 @@ class ParserOffers(ABC):
         print(f"\r {number_page} page: {len(offers)} offers", end="\r", flush=True)
 
         for ind, block in enumerate(offers):
-            self._parse_block(block=block)
+            self._parse_block(block)
 
             if not self.is_express_mode:
                 time.sleep(4)
@@ -351,17 +351,27 @@ class ParserOffers(ABC):
     @staticmethod
     def _define_location_data(block, is_sale: bool):
         elements = (
-            block.select("div[data-name='LinkArea']")[0]
+            block.select_one("div[data-name='LinkArea']")
             .select("div[data-name='GeneralInfoSectionRowComponent']")
         )
         location_data = dict()
+        location_data["labels"] = ""
+        location_data["underground"] = ""
+        location_data["underground_distance_time"] = -1
+        location_data["underground_distance_type"] = ""
         location_data["district"] = ""
         location_data["street"] = ""
-        location_data["underground"] = ""
+        location_data["house"] = ""
         if is_sale:
             location_data["residential_complex"] = ""
 
         for index, element in enumerate(elements):
+            # Speacial labels of qualities
+            l = location_data["labels"]
+            if not l and index == 1 and any([w in element.text.lower() for w in SPECIFIC_WORD_LABELS]):
+                labels = re.split(r'(?<=.)(?=[А-ХЧ-Я])', element.text)  # Split by uppercase letters excluding "Ц"
+                location_data["labels"] = ', '.join(labels)
+            
             if "р-н" in element.text:
                 address_elements = element.text.split(",")
                 if len(address_elements) < 2:
@@ -373,6 +383,20 @@ class ParserOffers(ABC):
                     location_data["underground"] = element.text.split(", м. ")[1]
                     if "," in location_data["underground"]:
                         location_data["underground"] = location_data["underground"].split(",")[0]
+                
+                # Underground remoteness
+                d = location_data["underground_distance_type"]
+                first_address = address_elements[0]
+                if not d and index < 3 and "минут" in first_address:
+                    distance = re.search(r'\d минуты? (пешком|на транспорт|на авто)', first_address).group(0).split()
+                    location_data["underground_distance_time"] = int(distance[0])
+                    location_data["underground_distance_type"] = distance[-1]
+
+                # House number
+                h = location_data["house"]
+                last_address = address_elements[-1].strip()
+                if not h and re.fullmatch(fr'^[\d\s./ка-е]{{1,{MAX_LEN_HOUSE_NUM}}}$', last_address, re.IGNORECASE):
+                    location_data["house"] = last_address
 
                 for ind, elem in enumerate(address_elements):
                     if "р-н" in elem:
