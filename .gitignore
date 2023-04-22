@@ -28,3 +28,8 @@ eggs/
 # Environments
 venv/
 .venv/
+
+
+### Data ###
+*.csv
+*.xlsx

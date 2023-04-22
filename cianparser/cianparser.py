@@ -1,5 +1,5 @@
 from cianparser.constants import *
-from cianparser.parser import ParserOffers
+from cianparser.parser import ParserOffersAuto
 
 offer_types = {"rent_long", "rent_short", "sale"}
 deal_types_not_implemented_yet = {"rent_short"}
@@ -12,7 +12,8 @@ def list_cities():
     return CITIES
 
 
-def parse(deal_type, accommodation_type, location, rooms="all", start_page=1, end_page=100, is_saving_csv=False, is_latin=False, is_express_mode=False, is_by_homeowner=False):
+def parse(deal_type, accommodation_type, location, rooms="all", start_page=1, end_page=100,
+          is_saving_csv=False, is_latin=False, is_express_mode=False, is_by_homeowner=False):
     """
     Parse information from cian website
     Examples:
@@ -80,7 +81,7 @@ def parse(deal_type, accommodation_type, location, rooms="all", start_page=1, en
         print("Sorry. This functionality has not yet been implemented, but it is planned...")
         return []
     else:
-        parser = ParserOffers(
+        parser = ParserOffersAuto(
             deal_type=deal_type,
             accommodation_type=accommodation_type,
             city_name=location,
@@ -93,10 +94,5 @@ def parse(deal_type, accommodation_type, location, rooms="all", start_page=1, en
             is_express_mode=is_express_mode,
             is_by_homeowner=is_by_homeowner,
         )
-
         parser.run()
-        print("")
-
         return parser.get_results()
-
-

@@ -21,5 +21,11 @@ setup(
         "Operating System :: OS Independent",
     ],
     keywords='python parser requests cloudscraper beautifulsoup cian realstate',
-    install_requires=['cloudscraper', 'beautifulsoup4', 'transliterate', 'lxml', 'datetime'],
+    install_requires=[
+        'cloudscraper',
+        'beautifulsoup4',
+        'transliterate',
+        'lxml',
+        # 'datetime',
+    ],
 )

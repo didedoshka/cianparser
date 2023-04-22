@@ -1,4 +1,4 @@
-def define_rooms_count(description):
+def define_rooms_count(description: str) -> int:
     if "1-комн" in description or "Студия" in description:
         rooms_count = 1
     elif "2-комн" in description:
@@ -15,11 +15,10 @@ def define_rooms_count(description):
     return rooms_count
 
 
-def define_id_url(url: str):
+def define_id_url(url: str) -> str:
     url_path_elements = url.split("/")
     if len(url_path_elements[-1]) > 3:
         return url_path_elements[-1]
     if len(url_path_elements[-2]) > 3:
         return url_path_elements[-2]
-
     return "-1"
