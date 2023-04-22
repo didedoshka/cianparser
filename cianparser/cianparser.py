@@ -103,7 +103,7 @@ def parse_auto(deal_type, accommodation_type, location, rooms="all", start_page=
 
 
 def parse_by_url(search_url: str, deal_type: str, accommodation_type: str, location: str,
-                 start_page: int, end_page: int, is_saving_csv=False, is_latin=False,
+                 start_page: int = 1, end_page: int = 100, is_saving_csv=False, is_latin=False,
                  is_express_mode=False, is_by_homeowner=False,
                  data_dir_path: pathlib.Path | None = None):
 
