@@ -167,6 +167,7 @@ class ParserOffers(ABC):
 
             total_planed_announcements = len(offers) * count_of_pages
             print(
+                f"\b" * 200 +
                 f"\r {number_page - self.start_page + 1} | {number_page} page with list: [" +
                 "=>" * (ind + 1) + "  " * (len(offers) - ind - 1) + "]" +
                 f" {math.ceil((ind + 1) * 100 / len(offers))}" + "%" +
