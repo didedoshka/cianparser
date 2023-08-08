@@ -18,7 +18,7 @@ class ParserOffers(ABC):
     def __init__(self, deal_type: str, accommodation_type: str, city_name: str,
                  start_page: int, end_page: int, is_saving_csv=False, is_latin=False,
                  is_express_mode=False, is_by_homeowner=False,
-                 data_dir_path: pathlib.Path | None = None):
+                 data_dir_path=None):
 
         self.accommodation_type = accommodation_type
         self.city_name = city_name
@@ -56,25 +56,23 @@ class ParserOffers(ABC):
 
         attempt_number_exception = 0
         for number_page in range(self.start_page, self.end_page + 1):
-            try:
-                parsed, attempt_number = False, 0
-                while not parsed and attempt_number < 3:
+            while attempt_number_exception < 3:
+                try:
+                    attempt_number = 0
                     parsed, attempt_number, end = self._load_and_parse_page(
                         number_page=number_page,
                         count_of_pages=self.end_page+1-self.start_page,
                         attempt_number=attempt_number,
                     )
-                    attempt_number_exception = 0
-                    if end:
-                        break
-            except Exception as exc:
-                attempt_number_exception += 1
-                if attempt_number_exception < 3:
-                    continue
-                print(f"\n\nException: {exc}")
-                print(f"The collection of information from the pages with ending parse on {number_page} page...\n")
-                print(f"Average price per day: {'{:,}'.format(int(self.average_price)).replace(',', ' ')} rub")
-                break
+                    break
+                except Exception as exc:
+                    attempt_number_exception += 1
+                    print(f"\n\nException: {exc}")
+                    time.sleep(2)
+                    print(f'Retrying. Attempt number {attempt_number_exception}')
+                    break
+            if attempt_number_exception == 3:
+                raise Exception('Couldn\'t parse cian.ru')
 
         print(f"\n\nThe collection of information from the pages with list of announcements is completed")
         print(f"Total number of parsed announcements: {self.parsed_announcements_count}. ", end="")
@@ -133,13 +131,22 @@ class ParserOffers(ABC):
         except:
             soup = BeautifulSoup(html, 'html.parser')
 
+        with open('meow.html', 'w') as meow:
+            meow.write(soup.text)
+
+        if 'Captcha' in soup.text:
+            raise Exception('Captcha')
+            return False, attempt_number + 1, True
+
         header = soup.select("div[data-name='HeaderDefault']")
         if len(header) == 0:
+            raise Exception('Empty header')
             return False, attempt_number + 1, True
 
         offers = soup.select("article[data-name='CardComponent']")
         page_number_html = soup.select("button[data-name='PaginationButton']")
         if len(page_number_html) == 0:
+            raise Exception('Can\'t find page number')
             return False, attempt_number + 1, True
 
         if page_number_html[0].text == "Назад" and (number_page != 1 and number_page != 0):
@@ -170,7 +177,7 @@ class ParserOffers(ABC):
                 flush=True,
             )
 
-        time.sleep(2)
+        time.sleep(10)
         return True, 0, True
 
     def _parse_block(self, block):
@@ -355,86 +362,99 @@ class ParserOffers(ABC):
             .select("div[data-name='GeneralInfoSectionRowComponent']")
         )
         location_data = dict()
-        location_data["labels"] = ""
-        location_data["underground"] = ""
-        location_data["underground_distance_time"] = -1
-        location_data["underground_distance_type"] = ""
-        location_data["district"] = ""
-        location_data["street"] = ""
-        location_data["house"] = ""
-        if is_sale:
-            location_data["residential_complex"] = ""
+        location_data['Адрес'] = ''
+        #     with open('meow.txt', 'a') as file:
+        #         if 'р-н' in element.text or 'поселок' in element.text:
+        #             location_data["useful"] = ', '.join(element.text.split(',')[-2:])
+        #             file.write(f'{location_data["useful"]}\n')
+        #         # file.write(repr(element.text)+'\n')
 
+        # location_data["labels"] = ""
+        # location_data["underground"] = ""
+        # location_data["underground_distance_time"] = -1
+        # location_data["underground_distance_type"] = ""
+        # location_data["district"] = ""
+        # location_data["street"] = ""
+        # location_data["house"] = ""
+        # location_data["useful"] = ""
+        # if is_sale:
+        #     location_data["residential_complex"] = ""
+        #
         for index, element in enumerate(elements):
-            # Speacial labels of qualities
-            l = location_data["labels"]
-            if not l and index == 1 and any([w in element.text.lower() for w in SPECIFIC_WORD_LABELS]):
-                labels = re.split(r'(?<=.)(?=[А-ХЧ-Я])', element.text)  # Split by uppercase letters excluding "Ц"
-                location_data["labels"] = ', '.join(labels)
-            
-            if "р-н" in element.text:
-                address_elements = element.text.split(",")
-                if len(address_elements) < 2:
-                    continue
+            with open('meow.txt', 'w') as file:
+                if 'Москва' in element.text and location_data['Адрес'] == '':
+                    location_data['Адрес'] = ', '.join(element.text.split(',')[-2:])
+                    file.write(f'{location_data["Адрес"]}\n')
+                # file.write(repr(element.text)+'\n')
 
-                if "ЖК" in address_elements[0] and "«" in address_elements[0] and "»" in address_elements[0]:
-                    location_data["residential_complex"] = address_elements[0].split("«")[1].split("»")[0]
-                if ", м. " in element.text:
-                    location_data["underground"] = element.text.split(", м. ")[1]
-                    if "," in location_data["underground"]:
-                        location_data["underground"] = location_data["underground"].split(",")[0]
-                
-                # Underground remoteness
-                d = location_data["underground_distance_type"]
-                first_address = address_elements[0]
-                if not d and index < 3 and "минут" in first_address:
-                    distance = re.search(r'\d минуты? (пешком|на транспорт|на авто)', first_address).group(0).split()
-                    location_data["underground_distance_time"] = int(distance[0])
-                    location_data["underground_distance_type"] = distance[-1]
-
-                # House number
-                h = location_data["house"]
-                last_address = address_elements[-1].strip()
-                if not h and re.fullmatch(fr'^[\d\s./ка-е]{{1,{MAX_LEN_HOUSE_NUM}}}$', last_address, re.IGNORECASE):
-                    location_data["house"] = last_address
-
-                for ind, elem in enumerate(address_elements):
-                    if "р-н" in elem:
-                        district = elem.replace("р-н", "").strip()
-                        location_data["district"] = district
-                        if "ЖК" in address_elements[-1]:
-                            location_data["residential_complex"] = address_elements[-1].strip()
-                        if "ЖК" in address_elements[-2]:
-                            location_data["residential_complex"] = address_elements[-2].strip()
-                        if "улица" in address_elements[-1]:
-                            location_data["street"] = address_elements[-1].replace("улица", "").strip()
-                            return location_data
-                        if "улица" in address_elements[-2]:
-                            location_data["street"] = address_elements[-2].replace("улица", "").strip()
-                            return location_data
-
-                        for after_district_address_element in address_elements[ind + 1:]:
-                            if len(list(set(after_district_address_element.split(" ")).intersection(
-                                    NOT_STREET_ADDRESS_ELEMENTS))) != 0:
-                                continue
-                            if len(after_district_address_element.strip().replace(" ", "")) < 4:
-                                continue
-                            location_data["street"] = after_district_address_element.strip()
-                            return location_data
-
-                return location_data
-
-        if location_data["district"] == "":
-            for index, element in enumerate(elements):
-                if ", м. " in element.text:
-                    location_data["underground"] = element.text.split(", м. ")[1]
-                    if "," in location_data["underground"]:
-                        location_data["underground"] = location_data["underground"].split(",")[0]
-                    if is_sale:
-                        address_elements = element.text.split(",")
-                        if "ЖК" in address_elements[-1]:
-                            location_data["residential_complex"] = address_elements[-1].strip()
-
+        #     # Speacial labels of qualities
+        #     l = location_data["labels"]
+        #     if not l and index == 1 and any([w in element.text.lower() for w in SPECIFIC_WORD_LABELS]):
+        #         labels = re.split(r'(?<=.)(?=[А-ХЧ-Я])', element.text)  # Split by uppercase letters excluding "Ц"
+        #         location_data["labels"] = ', '.join(labels)
+        #
+        #     if "р-н" in element.text:
+        #         address_elements = element.text.split(",")
+        #         if len(adrress_elements) < 2:
+        #             continue
+        #
+        #         if "ЖК" in address_elements[0] and "«" in address_elements[0] and "»" in address_elements[0]:
+        #             location_data["residential_complex"] = address_elements[0].split("«")[1].split("»")[0]
+        #         if ", м. " in element.text:
+        #             location_data["underground"] = element.text.split(", м. ")[1]
+        #             if "," in location_data["underground"]:
+        #                 location_data["underground"] = location_data["underground"].split(",")[0]
+        #
+        #         # Underground remoteness
+        #         d = location_data["underground_distance_type"]
+        #         first_address = address_elements[0]
+        #         if not d and index < 3 and "минут" in first_address:
+        #             distance = re.search(r'\d минуты? (пешком|на транспорт|на авто)', first_address).group(0).split()
+        #             location_data["underground_distance_time"] = int(distance[0])
+        #             location_data["underground_distance_type"] = distance[-1]
+        #
+        #         # House number
+        #         h = location_data["house"]
+        #         last_address = address_elements[-1].strip()
+        #         location_data["house"] = last_address
+        #
+        #         for ind, elem in enumerate(address_elements):
+        #             if "р-н" in elem:
+        #                 district = elem.replace("р-н", "").strip()
+        #                 location_data["district"] = district
+        #                 if "ЖК" in address_elements[-1]:
+        #                     location_data["residential_complex"] = address_elements[-1].strip()
+        #                 if "ЖК" in address_elements[-2]:
+        #                     location_data["residential_complex"] = address_elements[-2].strip()
+        #                 if "улица" in address_elements[-1]:
+        #                     location_data["street"] = address_elements[-1].replace("улица", "").strip()
+        #                     return location_data
+        #                 if "улица" in address_elements[-2]:
+        #                     location_data["street"] = address_elements[-2].replace("улица", "").strip()
+        #                     return location_data
+        #
+        #                 for after_district_address_element in address_elements[ind + 1:]:
+        #                     if len(list(set(after_district_address_element.split(" ")).intersection(
+        #                             NOT_STREET_ADDRESS_ELEMENTS))) != 0:
+        #                         continue
+        #                     if len(after_district_address_element.strip().replace(" ", "")) < 4:
+        #                         continue
+        #                     location_data["street"] = after_district_address_element.strip()
+        #                     return location_data
+        #
+        #         return location_data
+        #
+        # if location_data["district"] == "":
+        #     for index, element in enumerate(elements):
+        #         if ", м. " in element.text:
+        #             location_data["underground"] = element.text.split(", м. ")[1]
+        #             if "," in location_data["underground"]:
+        #                 location_data["underground"] = location_data["underground"].split(",")[0]
+        #             if is_sale:
+        #                 address_elements = element.text.split(",")
+        #                 if "ЖК" in address_elements[-1]:
+        #                     location_data["residential_complex"] = address_elements[-1].strip()
+        #
         return location_data
 
     @staticmethod
@@ -696,7 +716,7 @@ class ParserOffersAuto(ParserOffers):
     def __init__(self, deal_type: str, accommodation_type: str, city_name: str, location_id: str, rooms,
                  start_page: int, end_page: int, is_saving_csv=False, is_latin=False,
                  is_express_mode=False, is_by_homeowner=False,
-                 data_dir_path: pathlib.Path | None = None):
+                 data_dir_path=None):
 
         super().__init__(
             deal_type,
@@ -750,7 +770,7 @@ class ParserOffersByURL(ParserOffers):
     def __init__(self, search_url: str, deal_type: str, accommodation_type: str, city_name: str,
                  start_page: int, end_page: int, is_saving_csv=False, is_latin=False,
                  is_express_mode=False, is_by_homeowner=False,
-                 data_dir_path: pathlib.Path | None = None):
+                 data_dir_path=None):
 
         super().__init__(
             deal_type,

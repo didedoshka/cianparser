@@ -16,7 +16,7 @@ def list_cities():
 
 def parse_auto(deal_type, accommodation_type, location, rooms="all", start_page=1, end_page=100,
                is_saving_csv=False, is_latin=False, is_express_mode=False, is_by_homeowner=False,
-               data_dir_path: pathlib.Path | None = None):
+               data_dir_path=None):
     """Parse information from cian website.
 
     Examples:
@@ -105,7 +105,7 @@ def parse_auto(deal_type, accommodation_type, location, rooms="all", start_page=
 def parse_by_url(search_url: str, deal_type: str, accommodation_type: str, location: str,
                  start_page: int = 1, end_page: int = 100, is_saving_csv=False, is_latin=False,
                  is_express_mode=False, is_by_homeowner=False,
-                 data_dir_path: pathlib.Path | None = None):
+                 data_dir_path=None):
 
     parser = ParserOffersByURL(
         search_url,
