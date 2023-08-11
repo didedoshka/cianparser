@@ -5,7 +5,7 @@ Cianparser - это библиотека Python 3 (версии 3.8 и выше)
 
 ### Установка
 ```bash
-pip install cianparser
+pip install https://github.com/didedoshka/cianparser/archive/main.zip cianparser
 ```
 
 ### Использование
